@@ -2,259 +2,136 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>陀螺採購願望清單</title>
+  <title>88 Toys 聯合採購願望池</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <style>
-    body {
-      font-family: Arial, "Noto Sans TC", sans-serif;
-      background: #f5f5f5;
-      margin: 0;
-      padding: 20px;
-      color: #222;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: auto;
-    }
-
-    h1 {
-      text-align: center;
-    }
-
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-
-    label {
-      display: block;
-      margin-top: 12px;
-      font-weight: bold;
-    }
-
-    input, textarea, button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 6px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-
-    button {
-      margin-top: 16px;
-      background: #111;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #333;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 12px;
-      background: white;
-    }
-
-    th, td {
-      border-bottom: 1px solid #ddd;
-      padding: 10px;
-      text-align: left;
-    }
-
-    th {
-      background: #222;
-      color: white;
-    }
-
-    .status {
-      margin-top: 10px;
-      font-weight: bold;
-    }
-
-    .summary-item {
-      padding: 10px;
-      border-bottom: 1px solid #eee;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    @media (max-width: 600px) {
-      body {
-        padding: 12px;
-      }
-
-      table {
-        font-size: 14px;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
-  <div class="container">
-    <h1>陀螺採購願望清單</h1>
-
-    <div class="card">
-      <h2>填寫願望清單</h2>
-
-      <label for="name">暱稱</label>
-      <input id="name" placeholder="請輸入名稱">
-
-      <label for="item">想買品項</label>
-      <input id="item" placeholder="例如：UX-03 魔導神杖">
-
-      <label for="quantity">數量</label>
-      <input id="quantity" type="number" min="1" value="1">
-
-      <label for="note">備註</label>
-      <textarea id="note" rows="3" placeholder="例如：有現貨才收、價格太盤先不要"></textarea>
-
-      <button onclick="submitWishlist()">送出願望</button>
-      <div id="status" class="status"></div>
-    </div>
-
-    <div class="card">
-      <h2>群組需求統計</h2>
-      <div id="summary">載入中...</div>
-    </div>
-
-    <div class="card">
-      <h2>所有願望清單</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>暱稱</th>
-            <th>品項</th>
-            <th>數量</th>
-            <th>備註</th>
-          </tr>
-        </thead>
-        <tbody id="wishlistTable"></tbody>
-      </table>
-    </div>
+<header>
+  <div class="header-inner">
+    <h1>88 Toys 聯合採購願望池</h1>
+    <nav><a href="dashboard.html">查看需求總覽</a></nav>
   </div>
+</header>
 
-  <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbyzWN24VVOgHvNaDkPDIwyAASH2C9JeGis0MW42oKsBMWTezp8iBhXN8x4tOU_IGHnp/exec";
+<main class="container">
+  <section class="card">
+    <h2>填寫願望清單</h2>
+    <label for="name">暱稱</label>
+    <input id="name" placeholder="例如：鹿埔小隊">
 
-    async function submitWishlist() {
-      const name = document.getElementById("name").value.trim();
-      const item = document.getElementById("item").value.trim();
-      const quantity = document.getElementById("quantity").value;
-      const note = document.getElementById("note").value.trim();
-      const status = document.getElementById("status");
+    <div id="items"></div>
 
-      if (!name || !item || quantity < 1) {
-        status.textContent = "請填寫暱稱、品項與正確數量。";
-        status.style.color = "red";
-        return;
-      }
+    <button type="button" class="secondary" onclick="addItemRow()">＋ 新增品項</button>
+    <button type="button" onclick="submitWishlist()">送出願望</button>
+    <div id="status" class="status"></div>
+  </section>
 
-      status.textContent = "送出中...";
-      status.style.color = "#333";
+  <section class="card">
+    <h2>填寫說明</h2>
+    <p>可一次新增多個品項；若清單沒有，請選「其他／自訂品項」。送出後會自動彙整到群組需求總覽。</p>
+  </section>
+</main>
 
-      try {
-        const res = await fetch(GAS_URL, {
-          method: "POST",
-          body: JSON.stringify({
-            name,
-            item,
-            quantity,
-            note
-          })
-        });
+<script src="js/config.js"></script>
+<script>
+function escapeHtml(text) {
+  return String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
-        const result = await res.json();
+function buildOptions() {
+  return ITEM_OPTIONS.map(item => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("");
+}
 
-        if (result.success) {
-          status.textContent = "已成功送出！";
-          status.style.color = "green";
+function addItemRow() {
+  const box = document.getElementById("items");
+  const div = document.createElement("div");
+  div.className = "item-row";
+  div.innerHTML = `
+    <label>想買品項</label>
+    <select class="itemSelect" onchange="toggleCustom(this)">
+      <option value="">請選擇品項</option>
+      ${buildOptions()}
+      <option value="custom">其他／自訂品項</option>
+    </select>
+    <input class="customItem" placeholder="自訂品項名稱" style="display:none;">
+    <div class="row">
+      <div>
+        <label>數量</label>
+        <input class="qty" type="number" min="1" value="1">
+      </div>
+      <div>
+        <label>備註</label>
+        <input class="note" placeholder="可不填">
+      </div>
+      <button type="button" class="danger" onclick="this.closest('.item-row').remove()">刪</button>
+    </div>
+  `;
+  box.appendChild(div);
+}
 
-          document.getElementById("item").value = "";
-          document.getElementById("quantity").value = 1;
-          document.getElementById("note").value = "";
+function toggleCustom(select) {
+  const row = select.closest(".item-row");
+  const custom = row.querySelector(".customItem");
+  custom.style.display = select.value === "custom" ? "block" : "none";
+}
 
-          loadData();
-        } else {
-          status.textContent = result.message || "送出失敗";
-          status.style.color = "red";
-        }
+function getRows() {
+  const name = document.getElementById("name").value.trim();
+  const rows = [...document.querySelectorAll(".item-row")].map(row => {
+    const selectValue = row.querySelector(".itemSelect").value;
+    const customValue = row.querySelector(".customItem").value.trim();
+    const item = selectValue === "custom" ? customValue : selectValue;
+    const qty = Number(row.querySelector(".qty").value || 1);
+    const note = row.querySelector(".note").value.trim();
+    return { name, item, qty, note };
+  }).filter(r => r.name && r.item && r.qty > 0);
+  return rows;
+}
 
-      } catch (err) {
-        status.textContent = "送出失敗，請確認 GAS 網址與部署權限。";
-        status.style.color = "red";
-      }
-    }
+async function submitWishlist() {
+  const status = document.getElementById("status");
+  const rows = getRows();
 
-    async function loadData() {
-      const res = await fetch(`${GAS_URL}?action=list`);
-      const data = await res.json();
+  if (!document.getElementById("name").value.trim()) {
+    status.textContent = "請先輸入暱稱。";
+    status.style.color = "#b91c1c";
+    return;
+  }
+  if (rows.length === 0) {
+    status.textContent = "請至少選擇一個品項。";
+    status.style.color = "#b91c1c";
+    return;
+  }
 
-      renderSummary(data.summary);
-      renderTable(data.rows);
-    }
+  status.textContent = "送出中...";
+  status.style.color = "#111827";
 
-    function renderSummary(summary) {
-      const box = document.getElementById("summary");
-      box.innerHTML = "";
-
-      const items = Object.entries(summary || {})
-        .sort((a, b) => b[1] - a[1]);
-
-      if (items.length === 0) {
-        box.textContent = "目前還沒有願望清單。";
-        return;
-      }
-
-      items.forEach(([item, total]) => {
-        const div = document.createElement("div");
-        div.className = "summary-item";
-        div.innerHTML = `<span>${escapeHtml(item)}</span><strong>${total}</strong>`;
-        box.appendChild(div);
+  try {
+    for (const row of rows) {
+      const res = await fetch(GAS_URL, {
+        method: "POST",
+        body: JSON.stringify(row)
       });
+      const result = await res.json();
+      if (!result.success) throw new Error(result.message || "送出失敗");
     }
+    status.textContent = `已成功送出 ${rows.length} 筆願望！`;
+    status.style.color = "green";
+    document.getElementById("items").innerHTML = "";
+    addItemRow();
+  } catch (err) {
+    status.textContent = "送出失敗：" + err.message;
+    status.style.color = "#b91c1c";
+  }
+}
 
-    function renderTable(rows) {
-      const tbody = document.getElementById("wishlistTable");
-      tbody.innerHTML = "";
-
-      if (!rows || rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4">目前尚無資料</td></tr>`;
-        return;
-      }
-
-      rows.reverse().forEach(row => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${escapeHtml(row.name)}</td>
-          <td>${escapeHtml(row.item)}</td>
-          <td>${escapeHtml(row.quantity)}</td>
-          <td>${escapeHtml(row.note || "")}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function escapeHtml(text) {
-      return String(text)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
-    loadData();
-  </script>
+addItemRow();
+</script>
 </body>
 </html>
