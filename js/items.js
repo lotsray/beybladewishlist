@@ -35,7 +35,7 @@ const ITEM_OPTIONS = [
   { code: "BB93957", name: "UX-13 魔像奇岩", price: 295 },
   { code: "BB95849", name: "UX-14 天蠍長矛", price: 495 },
   { code: "BB98243", name: "UX-15 鮫鯊狂鱗改造組", price: 795 },
-  { code: "BB09616", name: "UX-19 子彈獅鷲H", price: 550 }
+  { code: "BB09616", name: "UX-19 子彈獅鷲", price: 550 }
 ];
 
 function getPriceByName(name) {
