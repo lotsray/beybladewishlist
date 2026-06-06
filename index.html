@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>陀螺採購願望清單</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial, "Noto Sans TC", sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+      color: #222;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+      font-weight: bold;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    button {
+      margin-top: 16px;
+      background: #111;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #333;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      background: white;
+    }
+
+    th, td {
+      border-bottom: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background: #222;
+      color: white;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .summary-item {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 12px;
+      }
+
+      table {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>陀螺採購願望清單</h1>
+
+    <div class="card">
+      <h2>填寫願望清單</h2>
+
+      <label for="name">暱稱</label>
+      <input id="name" placeholder="請輸入名稱">
+
+      <label for="item">想買品項</label>
+      <input id="item" placeholder="例如：UX-03 魔導神杖">
+
+      <label for="quantity">數量</label>
+      <input id="quantity" type="number" min="1" value="1">
+
+      <label for="note">備註</label>
+      <textarea id="note" rows="3" placeholder="例如：有現貨才收、價格太盤先不要"></textarea>
+
+      <button onclick="submitWishlist()">送出願望</button>
+      <div id="status" class="status"></div>
+    </div>
+
+    <div class="card">
+      <h2>群組需求統計</h2>
+      <div id="summary">載入中...</div>
+    </div>
+
+    <div class="card">
+      <h2>所有願望清單</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>暱稱</th>
+            <th>品項</th>
+            <th>數量</th>
+            <th>備註</th>
+          </tr>
+        </thead>
+        <tbody id="wishlistTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyzWN24VVOgHvNaDkPDIwyAASH2C9JeGis0MW42oKsBMWTezp8iBhXN8x4tOU_IGHnp/exec";
+
+    async function submitWishlist() {
+      const name = document.getElementById("name").value.trim();
+      const item = document.getElementById("item").value.trim();
+      const quantity = document.getElementById("quantity").value;
+      const note = document.getElementById("note").value.trim();
+      const status = document.getElementById("status");
+
+      if (!name || !item || quantity < 1) {
+        status.textContent = "請填寫暱稱、品項與正確數量。";
+        status.style.color = "red";
+        return;
+      }
+
+      status.textContent = "送出中...";
+      status.style.color = "#333";
+
+      try {
+        const res = await fetch(GAS_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            name,
+            item,
+            quantity,
+            note
+          })
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+          status.textContent = "已成功送出！";
+          status.style.color = "green";
+
+          document.getElementById("item").value = "";
+          document.getElementById("quantity").value = 1;
+          document.getElementById("note").value = "";
+
+          loadData();
+        } else {
+          status.textContent = result.message || "送出失敗";
+          status.style.color = "red";
+        }
+
+      } catch (err) {
+        status.textContent = "送出失敗，請確認 GAS 網址與部署權限。";
+        status.style.color = "red";
+      }
+    }
+
+    async function loadData() {
+      const res = await fetch(`${GAS_URL}?action=list`);
+      const data = await res.json();
+
+      renderSummary(data.summary);
+      renderTable(data.rows);
+    }
+
+    function renderSummary(summary) {
+      const box = document.getElementById("summary");
+      box.innerHTML = "";
+
+      const items = Object.entries(summary || {})
+        .sort((a, b) => b[1] - a[1]);
+
+      if (items.length === 0) {
+        box.textContent = "目前還沒有願望清單。";
+        return;
+      }
+
+      items.forEach(([item, total]) => {
+        const div = document.createElement("div");
+        div.className = "summary-item";
+        div.innerHTML = `<span>${escapeHtml(item)}</span><strong>${total}</strong>`;
+        box.appendChild(div);
+      });
+    }
+
+    function renderTable(rows) {
+      const tbody = document.getElementById("wishlistTable");
+      tbody.innerHTML = "";
+
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4">目前尚無資料</td></tr>`;
+        return;
+      }
+
+      rows.reverse().forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${escapeHtml(row.name)}</td>
+          <td>${escapeHtml(row.item)}</td>
+          <td>${escapeHtml(row.quantity)}</td>
+          <td>${escapeHtml(row.note || "")}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
