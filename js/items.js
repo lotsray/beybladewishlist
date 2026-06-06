@@ -3,7 +3,7 @@ const ITEM_OPTIONS = [
   { code: "BB91059", name: "BX-10 極限衝擊戰鬥盤", price: 850 },
   { code: "BB91078", name: "BX-11 X發射器握把", price: 150 },
   { code: "BB91305", name: "BX-18 X旋風發射器", price: 250 },
-  { code: "BB91307", name: "BX-20 音龍利刃改造組", price: 750 },
+  { code: "BB91307", name: "BX-20 蒼龍利刃改造組", price: 750 },
   { code: "BB91309", name: "BX-23 鳳凰飛翼 豪華組", price: 495 },
   { code: "BB91446", name: "BX-26 獨角刺心", price: 295 },
   { code: "BB91451", name: "BX-28 旋風發射器 白", price: 250 },
