@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>需求總覽｜88 Toys 聯合採購願望池</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <h1>需求總覽</h1>
+    <nav><a href="index.html">回填寫首頁</a></nav>
+  </div>
+</header>
+
+<main class="container">
+  <section class="grid">
+    <div class="stat"><div class="label">總需求數量</div><div id="totalQty" class="value">-</div></div>
+    <div class="stat"><div class="label">品項種類</div><div id="itemCount" class="value">-</div></div>
+    <div class="stat"><div class="label">登記玩家</div><div id="userCount" class="value">-</div></div>
+    <div class="stat"><div class="label">預估總金額</div><div id="totalValue" class="value">-</div></div>
+  </section>
+
+  <section class="card">
+    <h2>需求排行榜</h2>
+    <div id="ranking"></div>
+  </section>
+
+  <section class="card">
+    <h2>熱門商品 TOP20</h2>
+    <div id="barChart"></div>
+  </section>
+
+  <section class="card">
+    <h2>玩家統計</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>玩家</th><th>總數量</th></tr></thead>
+        <tbody id="userTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>完整資料表</h2>
+    <input id="search" class="search-box" placeholder="搜尋暱稱、品項或備註" oninput="renderRows()">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>時間</th><th>暱稱</th><th>品項</th><th>數量</th><th>備註</th></tr></thead>
+        <tbody id="dataTable"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="js/config.js"></script>
+<script>
+let allRows = [];
+let summary = [];
+let users = [];
+
+function escapeHtml(text) {
+  return String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function money(n) {
+  return "NT$ " + Number(n || 0).toLocaleString("zh-TW");
+}
+
+async function getJson(url) {
+  const res = await fetch(url);
+  return await res.json();
+}
+
+async function loadDashboard() {
+  const [listData, summaryData, userData, totalData] = await Promise.all([
+    getJson(`${GAS_URL}?action=list`),
+    getJson(`${GAS_URL}?action=summary`),
+    getJson(`${GAS_URL}?action=userSummary`),
+    getJson(`${GAS_URL}?action=totalValue`)
+  ]);
+
+  allRows = listData.rows || [];
+  summary = summaryData.summary || [];
+  users = userData.users || [];
+
+  document.getElementById("totalQty").textContent = summary.reduce((s, r) => s + Number(r.qty || 0), 0);
+  document.getElementById("itemCount").textContent = summary.length;
+  document.getElementById("userCount").textContent = users.length;
+  document.getElementById("totalValue").textContent = money(totalData.totalValue || 0);
+
+  renderRanking();
+  renderBars();
+  renderUsers();
+  renderRows();
+}
+
+function renderRanking() {
+  const box = document.getElementById("ranking");
+  if (summary.length === 0) {
+    box.textContent = "目前尚無資料。";
+    return;
+  }
+  const medals = ["🥇", "🥈", "🥉"];
+  box.innerHTML = summary.slice(0, 10).map((r, i) => `
+    <div class="bar-row">
+      <div class="bar-top">
+        <strong>${medals[i] || `<span class="badge">${i + 1}</span>`} ${escapeHtml(r.item)}</strong>
+        <span>${r.qty}</span>
+      </div>
+    </div>
+  `).join("");
+}
+
+function renderBars() {
+  const box = document.getElementById("barChart");
+  if (summary.length === 0) {
+    box.textContent = "目前尚無資料。";
+    return;
+  }
+  const max = Math.max(...summary.map(r => Number(r.qty || 0)), 1);
+  box.innerHTML = summary.slice(0, 20).map(r => {
+    const width = Math.max(4, Number(r.qty || 0) / max * 100);
+    return `
+      <div class="bar-row">
+        <div class="bar-top"><span>${escapeHtml(r.item)}</span><strong>${r.qty}</strong></div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${width}%"></div></div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderUsers() {
+  const tbody = document.getElementById("userTable");
+  tbody.innerHTML = users.length ? users.map(u => `
+    <tr><td>${escapeHtml(u.name)}</td><td>${u.count}</td></tr>
+  `).join("") : `<tr><td colspan="2">目前尚無資料</td></tr>`;
+}
+
+function renderRows() {
+  const key = document.getElementById("search").value.trim().toLowerCase();
+  const rows = allRows.filter(r => JSON.stringify(r).toLowerCase().includes(key)).reverse();
+  const tbody = document.getElementById("dataTable");
+  tbody.innerHTML = rows.length ? rows.map(r => `
+    <tr>
+      <td>${escapeHtml(formatTime(r.time))}</td>
+      <td>${escapeHtml(r.name)}</td>
+      <td>${escapeHtml(r.item)}</td>
+      <td>${escapeHtml(r.qty)}</td>
+      <td>${escapeHtml(r.note)}</td>
+    </tr>
+  `).join("") : `<tr><td colspan="5">目前尚無資料</td></tr>`;
+}
+
+function formatTime(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return value;
+  return d.toLocaleString("zh-TW", { hour12: false });
+}
+
+loadDashboard().catch(err => {
+  document.querySelector("main").innerHTML = `<section class="card"><h2>讀取失敗</h2><p>${escapeHtml(err.message)}</p></section>`;
+});
+</script>
+</body>
+</html>
