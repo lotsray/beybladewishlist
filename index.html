@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>鹿埔戰隊聯合採購願望池</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="stylesheet" href="css/style.css?v=7">
 </head>
 <body>
 <header>
@@ -37,8 +37,7 @@
   </section>
 </main>
 
-<script src="js/config.js?v=4"></script>
-<script src="js/items.js?v=4"></script>
+<script src="js/config.js?v=7"></script>
 
 <script>
 function escapeHtml(text) {
@@ -50,16 +49,50 @@ function escapeHtml(text) {
     .replaceAll("'", "&#039;");
 }
 
-function buildOptions() {
+function normalizeItemOptions() {
   if (typeof ITEM_OPTIONS === "undefined") {
-    console.error("ITEM_OPTIONS 未載入，請確認 js/items.js 是否有被 index.html 引用。");
-    return "";
+    console.error("ITEM_OPTIONS 未載入，請確認 js/config.js 內有設定 ITEM_OPTIONS。");
+    return [];
   }
 
   return ITEM_OPTIONS.map(item => {
-    const label = `${item.code}　${item.name}　$${item.price}`;
+    if (typeof item === "string") {
+      return {
+        code: "",
+        name: item,
+        price: 0
+      };
+    }
+
+    return {
+      code: item.code || "",
+      name: item.name || "",
+      price: Number(item.price || 0)
+    };
+  }).filter(item => item.name);
+}
+
+function buildOptions() {
+  const items = normalizeItemOptions();
+
+  return items.map(item => {
+    const codeText = item.code ? `${item.code}　` : "";
+    const priceText = item.price ? `　$${item.price}` : "";
+    const label = `${codeText}${item.name}${priceText}`;
+
     return `<option value="${escapeHtml(item.name)}">${escapeHtml(label)}</option>`;
   }).join("");
+}
+
+function getPriceByNameSafe(name) {
+  if (typeof getPriceByName === "function") {
+    return getPriceByName(name);
+  }
+
+  const items = normalizeItemOptions();
+  const found = items.find(item => item.name === name);
+
+  return found ? Number(found.price || 0) : 0;
 }
 
 function addItemRow() {
@@ -119,12 +152,14 @@ function updateRowSubtotal(element) {
 
   const selectValue = row.querySelector(".itemSelect").value;
   const qty = Number(row.querySelector(".qty").value || 1);
-  const price = getPriceByName(selectValue);
+  const price = getPriceByNameSafe(selectValue);
   const subtotal = price * qty;
 
   const subtotalBox = row.querySelector(".subtotal");
 
-  if (selectValue === "custom") {
+  if (!selectValue) {
+    subtotalBox.textContent = "小計：$0";
+  } else if (selectValue === "custom") {
     subtotalBox.textContent = "自訂品項不列入預估金額";
   } else {
     subtotalBox.textContent = `小計：$${subtotal.toLocaleString("zh-TW")}`;
@@ -143,7 +178,7 @@ function updateTotalPreview() {
     const qty = Number(row.querySelector(".qty").value || 1);
 
     if (selectValue && selectValue !== "custom") {
-      total += getPriceByName(selectValue) * qty;
+      total += getPriceByNameSafe(selectValue) * qty;
     }
   });
 
